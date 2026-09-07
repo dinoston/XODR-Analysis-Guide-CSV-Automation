@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pandas 기반 XODR 분석 및 자동화 보고서</title>
+<style>
+    :root {
+        --bg: #f5f7fb;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #64748b;
+        --line: #dbe3ef;
+        --primary: #2563eb;
+        --primary-soft: #eaf1ff;
+        --accent: #0f766e;
+        --warning: #b45309;
+        --danger: #b91c1c;
+        --code-bg: #111827;
+        --code-text: #e5eefc;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Malgun Gothic", "Apple SD Gothic Neo", Arial, sans-serif;
+        line-height: 1.7;
+    }
+    .container {
+        width: min(1180px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 38px 0 80px;
+    }
+    .hero {
+        padding: 46px;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #0f172a, #1d4ed8);
+        color: white;
+        box-shadow: 0 22px 55px rgba(15, 23, 42, .2);
+        margin-bottom: 28px;
+    }
+    .hero h1 {
+        margin: 0 0 14px;
+        font-size: 38px;
+        line-height: 1.25;
+    }
+    .hero p {
+        max-width: 880px;
+        margin: 0;
+        color: #dbeafe;
+        font-size: 17px;
+    }
+    .meta {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 22px;
+    }
+    .meta span {
+        padding: 7px 12px;
+        border: 1px solid rgba(255,255,255,.26);
+        border-radius: 999px;
+        font-size: 13px;
+        color: #eff6ff;
+    }
+    .toc, section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 30px;
+        margin: 22px 0;
+        box-shadow: 0 10px 28px rgba(30, 41, 59, .05);
+    }
+    .toc h2, section h2 {
+        margin-top: 0;
+        font-size: 25px;
+        border-bottom: 2px solid var(--primary-soft);
+        padding-bottom: 12px;
+    }
+    h3 {
+        margin-top: 30px;
+        font-size: 19px;
+        color: #0f3c8a;
+    }
+    .toc ol {
+        columns: 2;
+        column-gap: 40px;
+    }
+    .toc a {
+        color: #1d4ed8;
+        text-decoration: none;
+    }
+    .toc a:hover { text-decoration: underline; }
+    .flow {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin: 22px 0;
+    }
+    .flow .step {
+        position: relative;
+        min-height: 110px;
+        padding: 18px;
+        border-radius: 14px;
+        background: var(--primary-soft);
+        border: 1px solid #cbdcff;
+    }
+    .flow .step strong {
+        display: block;
+        color: #1d4ed8;
+        margin-bottom: 5px;
+    }
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+    }
+    .callout {
+        border-left: 5px solid var(--primary);
+        background: #f8fbff;
+        padding: 16px 18px;
+        border-radius: 10px;
+        margin: 18px 0;
+    }
+    .callout.warning {
+        border-left-color: var(--warning);
+        background: #fffaf0;
+    }
+    .callout.success {
+        border-left-color: var(--accent);
+        background: #f0fdfa;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 17px 0 24px;
+        font-size: 14px;
+    }
+    th, td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        vertical-align: top;
+        text-align: left;
+    }
+    th {
+        background: #edf3ff;
+        color: #173d77;
+    }
+    tr:nth-child(even) td { background: #fafcff; }
+    pre {
+        overflow-x: auto;
+        background: var(--code-bg);
+        color: var(--code-text);
+        border-radius: 14px;
+        padding: 18px;
+        line-height: 1.55;
+        font-size: 13px;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    code {
+        font-family: Consolas, "Courier New", monospace;
+    }
+    p code, li code, td code {
+        background: #eef2ff;
+        color: #3730a3;
+        border-radius: 5px;
+        padding: 2px 5px;
+    }
+    .badge {
+        display: inline-block;
+        padding: 3px 9px;
+        margin: 2px 3px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #3730a3;
+        font-size: 12px;
+    }
+    .checklist li { margin-bottom: 8px; }
+    .summary-box {
+        background: linear-gradient(135deg, #eef6ff, #effcf9);
+        border: 1px solid #cfe2ee;
+        border-radius: 16px;
+        padding: 22px;
+    }
+    .diagram {
+        padding: 18px;
+        background: #f8fafc;
+        border: 1px dashed #94a3b8;
+        border-radius: 13px;
+        white-space: pre-wrap;
+        font-family: Consolas, monospace;
+        line-height: 1.45;
+    }
+    footer {
+        color: var(--muted);
+        text-align: center;
+        padding-top: 24px;
+        font-size: 13px;
+    }
+    @media (max-width: 850px) {
+        .flow, .grid-2 { grid-template-columns: 1fr; }
+        .toc ol { columns: 1; }
+        .hero { padding: 30px; }
+        .hero h1 { font-size: 30px; }
+    }
+    @media print {
+        body { background: white; }
+        .container { width: 100%; padding: 0; }
+        .hero, .toc, section { box-shadow: none; break-inside: avoid; }
+        pre { white-space: pre-wrap; }
+    }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="hero">
+    <h1>Pandas 기반 OpenDRIVE(XODR) 분석 및 자동화 과정 보고서</h1>
+    <p>
+        판교 XODR 파일을 Jupyter Notebook에서 읽고, 도로·차선·Geometry·Junction·Signal·Object를
+        DataFrame으로 구조화한 뒤, 요약표·그래프·Excel 보고서·자동화 프로그램까지 발전시킨 과정을 정리한 실무형 보고서이다.
+    </p>
+    <div class="meta">
+        <span>대상: Pangyo.xodr</span>
+        <span>도구: Python · Pandas · ElementTree · Matplotlib · openpyxl</span>
+        <span>활용: RoadRunner · CARLA · SUMO · 데이터수집 지원</span>
+    </div>
+</header>
+
+<nav class="toc">
+    <h2>목차</h2>
+    <ol>
+        <li><a href="#purpose">분석 목적과 배경</a></li>
+        <li><a href="#concept">XODR와 XML 기본 개념</a></li>
+        <li><a href="#load">Jupyter에서 XODR 읽기</a></li>
+        <li><a href="#road">roads_df 구성</a></li>
+        <li><a href="#lane">lanes_df 구성</a></li>
+        <li><a href="#geometry">geometry_df 구성</a></li>
+        <li><a href="#junction">junction_df 구성</a></li>
+        <li><a href="#signal-object">signals_df와 objects_df</a></li>
+        <li><a href="#summary">summary_df 종합표</a></li>
+        <li><a href="#chart">그래프 분석</a></li>
+        <li><a href="#automation">Excel·CSV·PNG 자동화</a></li>
+        <li><a href="#quality">품질검사 후보</a></li>
+        <li><a href="#use">실무 활용 가치</a></li>
+        <li><a href="#next">향후 발전 방향</a></li>
+    </ol>
+</nav>
+
+<section id="purpose">
+    <h2>1. 분석 목적과 배경</h2>
+    <p>
+        기존 업무 흐름은 정밀지도 수령 → QGIS 편집 → RoadRunner 도로 구성 →
+        XODR·FBX 생성 → SUMO 연동 → 3ds Max 후반작업 → CARLA·Unreal 통합으로 이어진다.
+        판교와 K-City XODR 제작 경험, 성남 약 140km 대규모 맵의 World Partition 최적화 경험이 있으며,
+        여기에 Pandas 기반 XODR 분석을 추가하여 제작뿐 아니라 검증·보고·자동화까지 담당하는 것이 목표이다.
+    </p>
+    <div class="flow">
+        <div class="step"><strong>1. 원본 데이터</strong>정밀지도·GIS 데이터</div>
+        <div class="step"><strong>2. 도로 제작</strong>QGIS·RoadRunner</div>
+        <div class="step"><strong>3. 시뮬레이션</strong>XODR·SUMO·CARLA</div>
+        <div class="step"><strong>4. 분석·자동화</strong>Python·Pandas·Excel</div>
+    </div>
+    <div class="callout success">
+        핵심 변화는 “맵을 제작하는 사람”에서 “맵을 제작하고, 구조를 분석하고, 품질을 설명하며,
+        수집팀의 검증 우선순위를 제공하는 사람”으로 역할이 확장된다는 점이다.
+    </div>
+</section>
+
+<section id="concept">
+    <h2>2. XODR와 XML 기본 개념</h2>
+    <p>
+        OpenDRIVE의 <code>.xodr</code> 파일은 도로 메시 파일이 아니라 XML 기반의 도로 구조 데이터이다.
+        XML은 태그가 부모·자식 관계로 중첩되므로 나무(Tree) 구조로 해석할 수 있다.
+    </p>
+    <div class="diagram">OpenDRIVE
+└─ road
+   ├─ planView
+   │  └─ geometry
+   ├─ lanes
+   │  └─ laneSection
+   │     ├─ left
+   │     ├─ center
+   │     └─ right
+   ├─ signals
+   └─ objects
+
+junction
+└─ connection
+   └─ laneLink</div>
+
+    <h3>행과 열</h3>
+    <table>
+        <tr><th>용어</th><th>의미</th><th>XODR 분석 예시</th></tr>
+        <tr><td>Row(행)</td><td>가로 한 줄</td><td>road 하나 또는 lane 하나</td></tr>
+        <tr><td>Column(열)</td><td>세로 속성</td><td>road_id, length, junction 등</td></tr>
+    </table>
+
+    <h3>자주 등장하는 값</h3>
+    <table>
+        <tr><th>항목</th><th>뜻</th></tr>
+        <tr><td><code>junction="-1"</code></td><td>해당 road가 교차로 내부 connecting road가 아닌 일반 road임을 의미</td></tr>
+        <tr><td><code>length</code></td><td>road 또는 geometry의 길이. 기본 단위는 m</td></tr>
+        <tr><td><code>s</code></td><td>road 시작점으로부터 해당 요소가 시작되는 누적 거리. 단위 m</td></tr>
+        <tr><td><code>hdg</code></td><td>Heading, 즉 시작 방향. 단위 라디안</td></tr>
+    </table>
+</section>
+
+<section id="load">
+    <h2>3. Jupyter에서 XODR 읽기</h2>
+    <p>XML 분석을 위해 Python 표준 라이브러리인 ElementTree를 사용한다.</p>
+<pre><code>import os
+import pandas as pd
+import xml.etree.ElementTree as ET
+
+os.chdir(r"D:\xodrJupyter\testPangyo")
+
+tree = ET.parse("Pangyo.xodr")
+root = tree.getroot()
+
+print(root.tag)
+print(len(root.findall("road")))</code></pre>
+
+    <table>
+        <tr><th>코드</th><th>설명</th></tr>
+        <tr><td><code>ET.parse()</code></td><td>XODR XML 파일을 읽어 메모리 안에 트리 구조로 생성</td></tr>
+        <tr><td><code>tree.getroot()</code></td><td>트리 최상단의 <code>OpenDRIVE</code> 태그를 가져옴</td></tr>
+        <tr><td><code>root.findall("road")</code></td><td>OpenDRIVE 바로 아래의 모든 road 태그를 찾음</td></tr>
+    </table>
+</section>
+
+<section id="road">
+    <h2>4. roads_df 구성</h2>
+    <p>각 road를 한 행으로 만들고, 도로 ID·길이·교차로 소속 여부를 열로 구성한다.</p>
+<pre><code>roads = []
+
+for road in root.findall("road"):
+    roads.append({
+        "road_id": road.get("id"),
+        "length": float(road.get("length")),
+        "junction": road.get("junction")
+    })
+
+roads_df = pd.DataFrame(roads)
+roads_df.head()</code></pre>
+
+    <table>
+        <tr><th>road_id</th><th>length</th><th>junction</th></tr>
+        <tr><td>0</td><td>7.561865</td><td>-1</td></tr>
+        <tr><td>1</td><td>1.450241</td><td>-1</td></tr>
+        <tr><td>2</td><td>18.779106</td><td>-1</td></tr>
+    </table>
+
+    <div class="callout">
+        <code>junction=-1</code>은 “교차로가 없다”가 아니라, 이 road가 특정 junction 내부의 connecting road로
+        등록되어 있지 않다는 뜻이다.
+    </div>
+</section>
+
+<section id="lane">
+    <h2>5. lanes_df 구성</h2>
+    <p>
+        lane은 road 바로 아래가 아니라 <code>road → lanes → laneSection → left/center/right → lane</code>에 위치한다.
+        실무에서 lane 타입, 진행차선 수, laneSection 변화, lane 연결 관계를 확인하는 데 사용한다.
+    </p>
+<pre><code>lanes = []
+
+for road in root.findall("road"):
+    road_id = road.get("id")
+
+    for section_index, lane_section in enumerate(
+        road.findall("./lanes/laneSection")
+    ):
+        section_s = float(lane_section.get("s", 0))
+
+        for side_name in ["left", "center", "right"]:
+            side = lane_section.find(side_name)
+
+            if side is None:
+                continue
+
+            for lane in side.findall("lane"):
+                lanes.append({
+                    "road_id": road_id,
+                    "lane_section_index": section_index,
+                    "section_s": section_s,
+                    "side": side_name,
+                    "lane_id": int(lane.get("id")),
+                    "lane_type": lane.get("type"),
+                    "level": lane.get("level")
+                })
+
+lanes_df = pd.DataFrame(lanes)
+lanes_df.head()</code></pre>
+
+    <table>
+        <tr><th>열</th><th>의미</th></tr>
+        <tr><td>road_id</td><td>차선이 속한 도로 번호</td></tr>
+        <tr><td>lane_section_index</td><td>road 내 몇 번째 laneSection인지</td></tr>
+        <tr><td>section_s</td><td>laneSection 시작 위치</td></tr>
+        <tr><td>side</td><td>left, center, right</td></tr>
+        <tr><td>lane_id</td><td>왼쪽 양수, 중앙 0, 오른쪽 음수</td></tr>
+        <tr><td>lane_type</td><td>driving, sidewalk, shoulder, none 등</td></tr>
+    </table>
+</section>
+
+<section id="geometry">
+    <h2>6. geometry_df 구성</h2>
+    <p>
+        geometry는 도로 메시가 아니라 road reference line의 설계 정보다.
+        즉 도로 중심선을 직선, 원호, 완화곡선 등으로 어떻게 이어갈지 설명한다.
+    </p>
+<pre><code>geometries = []
+
+for road in root.findall("road"):
+    road_id = road.get("id")
+
+    for geometry in road.findall("./planView/geometry"):
+        geometry_type = "unknown"
+
+        if geometry.find("line") is not None:
+            geometry_type = "line"
+        elif geometry.find("arc") is not None:
+            geometry_type = "arc"
+        elif geometry.find("spiral") is not None:
+            geometry_type = "spiral"
+        elif geometry.find("poly3") is not None:
+            geometry_type = "poly3"
+        elif geometry.find("paramPoly3") is not None:
+            geometry_type = "paramPoly3"
+
+        geometries.append({
+            "road_id": road_id,
+            "s": float(geometry.get("s", 0)),
+            "x": float(geometry.get("x", 0)),
+            "y": float(geometry.get("y", 0)),
+            "hdg": float(geometry.get("hdg", 0)),
+            "length": float(geometry.get("length", 0)),
+            "geometry_type": geometry_type
+        })
+
+geometry_df = pd.DataFrame(geometries)</code></pre>
+
+    <div class="grid-2">
+        <div class="callout">
+            <strong>s</strong><br>
+            road 시작점에서 해당 geometry가 시작되는 누적 거리.
+        </div>
+        <div class="callout">
+            <strong>hdg</strong><br>
+            geometry 시작 방향. 0 rad는 +X 방향, 약 1.57 rad는 90도 방향.
+        </div>
+    </div>
+</section>
+
+<section id="junction">
+    <h2>7. junction_df 구성</h2>
+    <p>
+        현실의 교차로는 공간적 개념이고, XODR의 junction은 들어오는 road와 교차로 내부 connecting road,
+        laneLink를 묶어 관리하는 논리적 데이터 구조다.
+    </p>
+<pre><code>junctions = []
+
+for junction in root.findall("junction"):
+    junction_id = junction.get("id")
+
+    for connection in junction.findall("connection"):
+        lane_links = connection.findall("laneLink")
+
+        if not lane_links:
+            junctions.append({
+                "junction_id": junction_id,
+                "connection_id": connection.get("id"),
+                "incoming_road": connection.get("incomingRoad"),
+                "connecting_road": connection.get("connectingRoad"),
+                "contact_point": connection.get("contactPoint"),
+                "from_lane": None,
+                "to_lane": None
+            })
+
+        for lane_link in lane_links:
+            junctions.append({
+                "junction_id": junction_id,
+                "connection_id": connection.get("id"),
+                "incoming_road": connection.get("incomingRoad"),
+                "connecting_road": connection.get("connectingRoad"),
+                "contact_point": connection.get("contactPoint"),
+                "from_lane": lane_link.get("from"),
+                "to_lane": lane_link.get("to")
+            })
+
+junction_df = pd.DataFrame(junctions)</code></pre>
+
+    <table>
+        <tr><th>열</th><th>설명</th></tr>
+        <tr><td>incoming_road</td><td>교차로로 들어오는 road</td></tr>
+        <tr><td>connecting_road</td><td>교차로 내부에서 이동 경로를 구성하는 road</td></tr>
+        <tr><td>from_lane → to_lane</td><td>진입차선에서 연결도로 차선으로 이어지는 관계</td></tr>
+    </table>
+</section>
+
+<section id="signal-object">
+    <h2>8. signals_df와 objects_df</h2>
+
+    <h3>signals_df</h3>
+<pre><code>signals = []
+
+for road in root.findall("road"):
+    road_id = road.get("id")
+
+    for signal in road.findall("./signals/signal"):
+        signals.append({
+            "road_id": road_id,
+            "signal_id": signal.get("id"),
+            "s": float(signal.get("s", 0)),
+            "t": float(signal.get("t", 0)),
+            "type": signal.get("type"),
+            "subtype": signal.get("subtype"),
+            "orientation": signal.get("orientation")
+        })
+
+signals_df = pd.DataFrame(signals)</code></pre>
+
+    <h3>objects_df</h3>
+<pre><code>objects = []
+
+for road in root.findall("road"):
+    road_id = road.get("id")
+
+    for obj in road.findall("./objects/object"):
+        objects.append({
+            "road_id": road_id,
+            "object_id": obj.get("id"),
+            "name": obj.get("name"),
+            "type": obj.get("type"),
+            "s": float(obj.get("s", 0)),
+            "t": float(obj.get("t", 0)),
+            "length": float(obj.get("length", 0)),
+            "width": float(obj.get("width", 0)),
+            "height": float(obj.get("height", 0))
+        })
+
+objects_df = pd.DataFrame(objects)</code></pre>
+
+    <div class="callout warning">
+        프로젝트에 따라 신호나 도로 주변 객체가 XODR이 아니라 Unreal·FBX에서 별도로 관리될 수 있으므로,
+        빈 DataFrame이 나와도 곧바로 오류라고 판단하면 안 된다.
+    </div>
+</section>
+
+<section id="summary">
+    <h2>9. summary_df 종합표</h2>
+    <p>
+        여러 DataFrame을 road_id 기준으로 집계하여, road 하나에 대한 핵심 정보를 한 행에 모은다.
+        관리자·수석님·데이터수집팀에 보여주기 가장 적합한 표다.
+    </p>
+<pre><code>summary_df = roads_df.copy()
+
+lane_count = lanes_df.groupby("road_id").size()
+summary_df["lane_count"] = summary_df["road_id"].map(lane_count)
+
+driving_lane_count = (
+    lanes_df[lanes_df["lane_type"] == "driving"]
+    .groupby("road_id")
+    .size()
+)
+summary_df["driving_lane_count"] = (
+    summary_df["road_id"].map(driving_lane_count)
+)
+
+geometry_count = geometry_df.groupby("road_id").size()
+summary_df["geometry_count"] = (
+    summary_df["road_id"].map(geometry_count)
+)
+
+geometry_types = (
+    geometry_df.groupby("road_id")["geometry_type"]
+    .apply(lambda x: ", ".join(x.unique()))
+)
+summary_df["geometry_types"] = (
+    summary_df["road_id"].map(geometry_types)
+)
+
+summary_df = summary_df.fillna(0)</code></pre>
+
+    <table>
+        <tr>
+            <th>road_id</th><th>length</th><th>junction</th>
+            <th>lane_count</th><th>driving_lane_count</th>
+            <th>geometry_count</th><th>geometry_types</th>
+        </tr>
+        <tr><td>0</td><td>7.56</td><td>-1</td><td>3</td><td>2</td><td>1</td><td>line</td></tr>
+        <tr><td>1</td><td>18.77</td><td>-1</td><td>5</td><td>4</td><td>2</td><td>line, arc</td></tr>
+    </table>
+</section>
+
+<section id="chart">
+    <h2>10. 그래프 분석</h2>
+    <p>표를 시각화하면 맵의 규모, 구성, 복잡도, 검수 우선순위를 빠르게 이해할 수 있다.</p>
+
+    <h3>Road 길이 분포</h3>
+<pre><code>import matplotlib.pyplot as plt
+
+roads_df["length"].hist(bins=30)
+plt.title("Road Length Distribution")
+plt.xlabel("Length (m)")
+plt.ylabel("Count")
+plt.show()</code></pre>
+
+    <h3>Lane 종류</h3>
+<pre><code>lanes_df["lane_type"].value_counts().plot.bar()
+plt.title("Lane Type Count")
+plt.show()</code></pre>
+
+    <h3>Geometry 종류</h3>
+<pre><code>geometry_df["geometry_type"].value_counts().plot.bar()
+plt.title("Geometry Type Count")
+plt.show()</code></pre>
+
+    <h3>가장 긴 road 상위 10개</h3>
+<pre><code>top10 = roads_df.sort_values(
+    "length",
+    ascending=False
+).head(10)
+
+plt.bar(top10["road_id"], top10["length"])
+plt.title("Top 10 Longest Roads")
+plt.show()</code></pre>
+
+    <div class="callout success">
+        보고서용 핵심 그래프는 Road 길이 분포, Lane 타입, Geometry 타입,
+        Driving lane 분포, 가장 긴 Road, 복잡한 Junction 상위 목록이다.
+    </div>
+</section>
+
+<section id="automation">
+    <h2>11. Excel·CSV·PNG 자동화</h2>
+    <p>
+        최종 자동화 프로그램은 XODR 파일 하나를 입력하면 분석부터 보고서 저장까지 자동 수행하도록 구성하였다.
+    </p>
+    <div class="diagram">XODR 선택
+→ XML 파싱
+→ DataFrame 생성
+→ Summary 구성
+→ 품질검사 후보 추출
+→ 그래프 PNG 저장
+→ CSV 백업 저장
+→ Excel 보고서 저장
+→ XLSX 무결성 검사
+→ 결과 폴더 자동 열기</div>
+
+    <h3>Excel 자동 저장</h3>
+<pre><code>with pd.ExcelWriter(
+    "Pangyo_XODR_Analysis.xlsx",
+    engine="openpyxl"
+) as writer:
+    roads_df.to_excel(writer, sheet_name="Roads", index=False)
+    lanes_df.to_excel(writer, sheet_name="Lanes", index=False)
+    geometry_df.to_excel(writer, sheet_name="Geometry", index=False)
+    junction_df.to_excel(writer, sheet_name="Junctions", index=False)
+    signals_df.to_excel(writer, sheet_name="Signals", index=False)
+    objects_df.to_excel(writer, sheet_name="Objects", index=False)
+    summary_df.to_excel(writer, sheet_name="Road Summary", index=False)</code></pre>
+
+    <h3>안정성 개선</h3>
+    <ul class="checklist">
+        <li>최종 파일에 바로 저장하지 않고 임시 XLSX에 먼저 기록</li>
+        <li>XLSX ZIP 내부의 <code>[Content_Types].xml</code>, <code>xl/workbook.xml</code> 확인</li>
+        <li><code>openpyxl</code>로 다시 열어 무결성 확인</li>
+        <li>검사를 통과한 경우에만 최종 파일명으로 변경</li>
+        <li>Excel 실패 시에도 CSV 백업 유지</li>
+        <li><code>analysis.log</code>와 <code>error.log</code> 생성</li>
+    </ul>
+</section>
+
+<section id="quality">
+    <h2>12. 자동 품질검사 후보</h2>
+    <p>
+        자동 검사는 “확정 오류”를 판정하는 것이 아니라 사람이 확인해야 할 우선순위를 좁히는 역할을 한다.
+    </p>
+    <table>
+        <tr><th>검사 항목</th><th>의미</th><th>주의점</th></tr>
+        <tr><td>10m 미만 road</td><td>과도하게 짧게 분할된 road 후보</td><td>교차로 connecting road는 정상적으로 짧을 수 있음</td></tr>
+        <tr><td>일반 road인데 driving lane 0</td><td>주행 가능한 차선 누락 후보</td><td>도로 용도에 따라 정상일 수 있음</td></tr>
+        <tr><td>geometry 길이 합계 불일치</td><td>road length와 planView 구성 검토</td><td>허용 오차 기준 필요</td></tr>
+        <tr><td>laneLink 없음</td><td>junction 연결 관계 검토</td><td>junction 유형에 따라 예외 가능</td></tr>
+        <tr><td>중복 road ID</td><td>ID 충돌 가능성</td><td>대체로 우선 확인 필요</td></tr>
+        <tr><td>중복 lane ID</td><td>같은 laneSection 내 ID 중복 후보</td><td>road·section·side 조합으로 판단</td></tr>
+    </table>
+</section>
+
+<section id="use">
+    <h2>13. 실무 활용 가치</h2>
+
+    <div class="grid-2">
+        <div>
+            <h3>데이터수집팀 지원</h3>
+            <ul>
+                <li>복잡한 junction 우선 테스트</li>
+                <li>급커브·차선 증감 구간 추출</li>
+                <li>Waypoint 단절 의심 road_id 전달</li>
+                <li>수집하지 않은 road·lane 커버리지 계산</li>
+                <li>신호·객체 위치별 시나리오 작성</li>
+            </ul>
+        </div>
+        <div>
+            <h3>수석·관리자 보고</h3>
+            <ul>
+                <li>전체 road·lane·junction 규모</li>
+                <li>도로 총길이 및 길이 분포</li>
+                <li>Geometry 타입 분포</li>
+                <li>품질검사 경고 건수</li>
+                <li>버전별 개선 추세</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="summary-box">
+        <strong>경력적 의미</strong><br>
+        RoadRunner와 CARLA를 사용하는 제작 경험에 Python·Pandas 자동화를 결합하면,
+        단순 맵 제작자에서 “OpenDRIVE 데이터 구조를 이해하고, 검증 도구를 개발하며,
+        실제 데이터수집 업무를 지원하는 자율주행·디지털트윈 파이프라인 인력”으로 포지셔닝할 수 있다.
+    </div>
+</section>
+
+<section id="next">
+    <h2>14. 향후 발전 방향</h2>
+    <ol>
+        <li><strong>폴더 일괄 분석:</strong> 판교, K-City, 항만 등 여러 XODR을 한 번에 비교</li>
+        <li><strong>버전 비교:</strong> v12와 v13의 추가·삭제·변경 road 자동 추출</li>
+        <li><strong>CARLA 로그 결합:</strong> road_id·lane_id 기반 데이터수집 커버리지 계산</li>
+        <li><strong>SUMO 변환 자동화:</strong> 정상 파일만 netconvert 실행 후 실패 목록 기록</li>
+        <li><strong>GUI/EXE:</strong> 파일 선택, 진행률, 결과 폴더 열기 기능</li>
+        <li><strong>항만 특화:</strong> 대형 트럭 회전구간, 병목, 차선폭·곡률 검증</li>
+        <li><strong>드론 연계:</strong> Pix4D → QGIS → RoadRunner → XODR → CARLA end-to-end 파이프라인</li>
+    </ol>
+</section>
+
+<footer>
+    본 보고서는 대화에서 진행한 Pandas 기반 XODR 분석 학습과 자동화 과정을 정리한 문서이다.
+</footer>
+
+</div>
+</body>
+</html>
