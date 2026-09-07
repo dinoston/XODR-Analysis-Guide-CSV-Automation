@@ -1,5 +1,185 @@
 # XODR Analysis Guide & CSV Automation
 
+<table>
+  <tr>
+    <th width="33%">Analyzer GUI</th>
+    <th width="33%">Generated charts</th>
+    <th width="33%">CSV analysis results</th>
+  </tr>
+  <tr>
+    <td><img src="docs/images/01-analyzer-gui.png" alt="XODR Analyzer v2 GUI"></td>
+    <td><img src="docs/images/02-analysis-charts.png" alt="Charts generated from XODR analysis"></td>
+    <td><img src="docs/images/03-csv-results.png" alt="CSV files generated from XODR analysis"></td>
+  </tr>
+</table>
+
+[English](#english) · [한국어](#한국어)
+
+## English
+
+This Windows tool automatically analyzes an OpenDRIVE (`.xodr`) road network with Python and Pandas, then generates an Excel workbook, individual CSV tables, charts, quality-check results, and execution logs. Select a file in the GUI or drag an XODR file onto the batch launcher to create a complete analysis folder.
+
+![XODR Analyzer demo](docs/xodr-analyzer-demo.gif)
+
+> [Watch the full MP4 recording](docs/xodr-analyzer-demo.mp4)
+
+### Download and report
+
+- [Download XODR Analyzer v2](./XODR_Analyzer_v2_Fixed.zip)
+- [Open the Pandas XODR analysis and automation report](./Pandas_XODR_Analysis_Report.html)
+
+### Features
+
+- Parses the XODR XML structure automatically
+- Extracts Road, Lane, Geometry, Junction, Signal, and Object data
+- Builds a per-road summary table
+- Creates a consolidated Excel workbook
+- Saves every analysis table as a CSV backup
+- Generates charts for road length, lane types, geometry types, longest roads, and complex junctions
+- Checks short roads, duplicate IDs, geometry-length mismatches, and missing lane links
+- Writes execution and error logs
+- Validates the generated XLSX before replacing the final workbook
+
+### Installation
+
+1. Download [XODR_Analyzer_v2_Fixed.zip](./XODR_Analyzer_v2_Fixed.zip).
+2. Fully extract the ZIP file.
+3. Run `install_requirements.bat` once.
+
+Required Python packages:
+
+```text
+pandas
+matplotlib
+openpyxl
+```
+
+Python must be installed and available through the Windows `py` or `python` command.
+
+### Running the analyzer
+
+#### GUI
+
+Run `open_xodr_analyzer_gui.bat`:
+
+1. Select an `.xodr` file.
+2. Click the analysis button.
+3. The result folder opens automatically when processing finishes.
+
+#### Drag and drop
+
+Drag an `.xodr` file onto `run_xodr_analyzer.bat`.
+
+#### Python command line
+
+```powershell
+python xodr_analyzer.py "C:\Maps\Pangyo.xodr"
+```
+
+An output directory may also be specified explicitly:
+
+```powershell
+python xodr_analyzer.py "C:\Maps\Pangyo.xodr" --output "C:\Maps\Pangyo_Report"
+```
+
+### Extracted tables
+
+| Table | Contents |
+|---|---|
+| Roads | Road ID, name, length, and junction association |
+| Lanes | Lane section, lane ID, type, width, and direction-related data |
+| Geometry | Line, arc, spiral, poly3, paramPoly3, coordinates, and length |
+| Junctions | Connections and lane-link relationships |
+| Signals | Signal ID, position, orientation, country, type, and value |
+| Objects | Road-object ID, type, position, and dimensions |
+| Road Summary | Per-road lane, geometry, signal, and object counts |
+| Basic Statistics | Overall counts, lengths, averages, and quality-check totals |
+
+### Automated quality checks
+
+- Unusually short roads
+- Normal roads versus junction-internal roads
+- Differences between road length and the sum of geometry lengths
+- Missing lane links in junction connections
+- Duplicate road IDs
+- Duplicate lane IDs within the same lane section
+
+The check tables are included in both Excel and CSV outputs so potential problems in large XODR networks can be filtered quickly.
+
+### Output folder
+
+Analyzing `Pangyo.xodr` creates the following folder beside the source file:
+
+```text
+Pangyo_analysis_result/
+├─ Pangyo_XODR_Analysis.xlsx
+├─ csv/
+│  ├─ Basic_Statistics.csv
+│  ├─ Roads.csv
+│  ├─ Lanes.csv
+│  ├─ Geometry.csv
+│  ├─ Junctions.csv
+│  ├─ Signals.csv
+│  ├─ Objects.csv
+│  └─ summary and quality-check CSV files
+├─ charts/
+│  ├─ 01_road_length_distribution.png
+│  ├─ 02_lane_type_count.png
+│  ├─ 03_geometry_type_count.png
+│  ├─ 04_driving_lane_distribution.png
+│  ├─ 05_top15_longest_roads.png
+│  └─ 06_top15_complex_junctions.png
+├─ analysis.log
+└─ error.log (only when an error occurs)
+```
+
+CSV backups and available results are preserved even when the XODR does not contain every optional element.
+
+### Excel integrity protection
+
+XODR Analyzer v2 writes the workbook to a temporary file before publishing the final XLSX:
+
+1. Write a temporary XLSX.
+2. Validate the internal ZIP structure.
+3. Reopen and validate it with `openpyxl`.
+4. Replace the final workbook only after all checks pass.
+
+Close an existing analysis workbook before running the tool again. If Excel has locked the output file, the analyzer reports a clear error while retaining CSV backups and logs.
+
+### Use cases
+
+- Inspect XODR files used by CARLA, SUMO, or RoadRunner
+- Produce statistics and quality reports for large road networks
+- Find potential road, lane, geometry, and junction errors
+- Deliver review results as Excel and CSV
+- Build automated comparisons across multiple regional XODR files
+
+### Repository files
+
+```text
+xodr_analyzer.py                  analysis engine
+xodr_analyzer_gui.pyw             desktop GUI
+open_xodr_analyzer_gui.bat        GUI launcher
+run_xodr_analyzer.bat             drag-and-drop/CLI launcher
+install_requirements.bat          dependency installer
+requirements.txt                  Python dependencies
+XODR_Analyzer_v2_Fixed.zip        distributable package
+Pandas_XODR_Analysis_Report.html  detailed analysis report
+docs/xodr-analyzer-demo.gif       README demo
+docs/xodr-analyzer-demo.mp4       original recording
+```
+
+### Planned extensions
+
+- Batch analysis and comparison of multiple XODR files
+- Automatic visualization of coordinate bounds and suspicious geometry
+- Integration with RoadRunner, SUMO, and CARLA workflows
+- Custom report templates and validation rules
+
+---
+
+## 한국어
+
 ![XODR Analyzer 실행 데모](docs/xodr-analyzer-demo.gif)
 
 OpenDRIVE(`.xodr`) 도로망을 Python·Pandas로 자동 분석하고 Excel, CSV, 그래프와 품질검사 결과를 생성하는 Windows 도구입니다. GUI에서 파일을 선택하거나 XODR을 BAT 파일에 드래그앤드롭하면 분석 결과 폴더가 자동 생성됩니다.
